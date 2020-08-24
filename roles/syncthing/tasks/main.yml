@@ -1,0 +1,60 @@
+#########################################################################
+# Title:         Mod: Syncthing                                         #
+# Author(s):     Kamilli0n                                              #
+# URL:           https://github.com/Cloudbox/cloudbox_mod               #
+# Docker Image:  linuxserver/syncthing:latest                           #
+# --                                                                    #
+#         Part of the Cloudbox project: https://cloudbox.works          #
+#########################################################################
+#                   GNU General Public License v3.0                     #
+#########################################################################
+---
+
+- name: "Set DNS Record on CloudFlare"
+  include_role:
+    name: cloudflare-dns
+  vars:
+   subdomain: syncthing
+   when: cloudflare_enabled
+
+- name: Stop and remove any existing container
+  docker_container:
+    name: syncthing
+    state: absent
+
+- name: Create directories
+  file: "path={{ item }} state=directory mode=0775 owner={{ user.name }} group={{ user.name }}"
+  with_items:
+    - /opt/syncthing
+
+- name: Create and start container
+  docker_container:
+    name: syncthing
+    image: "linuxserver/syncthing:latest"
+    pull: yes
+    published_ports:
+      - "127.0.0.1:8384:8384"
+      - "22000:22000"
+      - "21027:21027/udp"
+    env:
+      PUID: "{{ uid }}"
+      PGID: "{{ gid }}"
+      VIRTUAL_HOST: "syncthing.{{ user.domain }}"
+      VIRTUAL_PORT: "8384"
+      LETSENCRYPT_HOST: "syncthing.{{ user.domain }}"
+      LETSENCRYPT_EMAIL: "{{ user.email }}"
+      TZ: "{{ tz }}"
+    volumes:
+      - "/opt/syncthing:/config"
+      - "/mnt/local:/data"
+      - "/home/{{ user.name }}:/home"
+      - "/opt:/opt"
+    labels:
+      "com.github.cloudbox.cloudbox_managed": "true"
+    networks:
+      - name: cloudbox
+        aliases:
+          - syncthing
+    purge_networks: yes
+    restart_policy: unless-stopped
+    state: started
