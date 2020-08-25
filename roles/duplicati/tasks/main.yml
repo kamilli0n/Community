@@ -1,0 +1,58 @@
+#########################################################################
+# Title:         Mod: Duplicati                                         #
+# Author(s):     Kamilli0n                                              #
+# URL:           https://github.com/Cloudbox/cloudbox_mod               #
+# Docker Image:   linuxserver/duplicati                           #
+# --                                                                    #
+#         Part of the Cloudbox project: https://cloudbox.works          #
+#########################################################################
+#                   GNU General Public License v3.0                     #
+#########################################################################
+---
+
+- name: "Set DNS Record on CloudFlare"
+  include_role:
+    name: cloudflare-dns
+  vars:
+   subdomain: duplicati
+   when: cloudflare_enabled
+
+- name: Stop and remove any existing container
+  docker_container:
+    name: duplicati
+    state: absent
+
+- name: Create directories
+  file: "path={{ item }} state=directory mode=0775 owner={{ user.name }} group={{ user.name }}"
+  with_items:
+    - /opt/duplicati
+
+- name: Create and start container
+  docker_container:
+    name: duplicati
+    image: "linuxserver/duplicati"
+    pull: yes
+    published_ports:
+      - "127.0.0.1:8200:8200"
+    env:
+      PUID: "{{ uid }}"
+      PGID: "{{ gid }}"
+      VIRTUAL_HOST: "duplicati.{{ user.domain }}"
+      VIRTUAL_PORT: "8200"
+      LETSENCRYPT_HOST: "duplicati.{{ user.domain }}"
+      LETSENCRYPT_EMAIL: "{{ user.email }}"
+      TZ: "{{ tz }}"
+    volumes:
+      - "/opt/syncthing:/config"
+      - "/mnt/local:/data"
+      - "/home/:/home"
+      - "/opt:/opt"
+    labels:
+      "com.github.cloudbox.cloudbox_managed": "true"
+    networks:
+      - name: cloudbox
+        aliases:
+          - syncthing
+    purge_networks: yes
+    restart_policy: unless-stopped
+    state: started
