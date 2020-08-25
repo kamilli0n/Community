@@ -47,8 +47,6 @@
     volumes:
       - "/opt/syncthing:/config"
       - "/mnt/local:/data"
-      - "/home/{{ user.name }}:/home"
-      - "/opt:/opt"
     labels:
       "com.github.cloudbox.cloudbox_managed": "true"
     networks:

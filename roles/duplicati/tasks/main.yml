@@ -26,6 +26,7 @@
   file: "path={{ item }} state=directory mode=0775 owner={{ user.name }} group={{ user.name }}"
   with_items:
     - /opt/duplicati
+    - /mnt/local/Backups/duplicati
 
 - name: Create and start container
   docker_container:
@@ -43,16 +44,14 @@
       LETSENCRYPT_EMAIL: "{{ user.email }}"
       TZ: "{{ tz }}"
     volumes:
-      - "/opt/syncthing:/config"
+      - "/opt/duplicati:/config"
       - "/mnt/local:/data"
-      - "/home/:/home"
-      - "/opt:/opt"
     labels:
       "com.github.cloudbox.cloudbox_managed": "true"
     networks:
       - name: cloudbox
         aliases:
-          - syncthing
+          - duplicati
     purge_networks: yes
     restart_policy: unless-stopped
     state: started
